@@ -21,10 +21,10 @@ eth-account==0.11.0
 web3==6.20.1
 
 # ========== Data & Analysis ==========
-pandas==2.1.4
-numpy==1.26.2
-pandas-ta==0.3.14b0
-TA-Lib==0.4.32  # Technical indicators
+pandas==2.3.2
+numpy==2.2.6
+pandas-ta==0.4.71b0
+TA-Lib==0.6.8  # Technical indicators
 Backtesting==0.3.3  # Backtesting framework
 yfinance==0.2.43  # For fetching Yahoo Finance data
 
@@ -34,10 +34,10 @@ termcolor==2.3.0
 colorama==0.4.6  # For colored terminal output
 requests==2.31.0
 tqdm==4.67.1
-pathlib
+pathlib==1.0.1
 schedule==1.2.0  # For scheduled tasks
 psutil==5.9.8  # System and process utilities
-asyncio  # Built-in, but noting for async support
+asyncio==4.0.0  # Built-in, but noting for async support
 httpx==0.28.1  # Modern HTTP client
 
 # ========== Media Processing ==========
@@ -59,7 +59,7 @@ twikit==2.2.1  # Twitter API client
 # ========== Optional/Advanced ==========
 # Uncomment if needed for specific agents:
 # jupyter==1.0.0  # For notebook support
-# beautifulsoup4==4.12.0  # For web scraping
+beautifulsoup4==4.14.2  # For web scraping
 # selenium==4.15.0  # For browser automation
 # playwright==1.40.0  # Alternative browser automation
 
