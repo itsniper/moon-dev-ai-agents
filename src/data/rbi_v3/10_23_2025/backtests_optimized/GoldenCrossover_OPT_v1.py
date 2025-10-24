@@ -1,9 +1,10 @@
 import pandas as pd
+import os
 import numpy as np
 import talib
 from backtesting import Backtest, Strategy
 
-data = pd.read_csv('/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/rbi/BTC-USD-15m.csv', parse_dates=['datetime'])
+data = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rbi', 'BTC-USD-15m.csv'), parse_dates=['datetime'])
 data.columns = data.columns.str.strip().str.lower()
 data = data.drop(columns=[col for col in data.columns if 'unnamed' in col.lower()])
 data = data.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'})

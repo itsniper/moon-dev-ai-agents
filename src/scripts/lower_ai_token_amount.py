@@ -22,9 +22,13 @@ def process_files(input_file, output_file):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+import os
+from ..config import DATA_DIR
+
 # Define the input and output file paths
-input_file_path = '/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/chat_agent/knowledge_base.txt'
-output_file_path = '/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/chat_agent/knowledge_base.txt'
+knowledge_base_path = os.path.join(DATA_DIR, "chat_agent", "knowledge_base.txt")
+input_file_path = knowledge_base_path
+output_file_path = knowledge_base_path
 
 # Call the function to process the files
 process_files(input_file_path, output_file_path)

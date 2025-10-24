@@ -1,9 +1,10 @@
 import pandas as pd
+import os
 import numpy as np
 import talib
 from backtesting import Backtest, Strategy
 
-path = "/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/rbi/BTC-USD-15m.csv"
+path = "os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rbi', 'BTC-USD-15m.csv')"
 data = pd.read_csv(path, index_col=0, parse_dates=True)
 data.columns = data.columns.str.strip().str.lower()
 data = data.drop(columns=[col for col in data.columns if 'unnamed' in col.lower()])

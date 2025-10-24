@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import pandas as pd
 from backtesting import Backtest, Strategy
 import talib
@@ -184,7 +185,7 @@ class FractalCascade(Strategy):
                         print(f"🌙 Moon Dev: Dynamic trail SL short to {new_trail_sl:.2f} ✨")
 
 if __name__ == '__main__':
-    data_path = '/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/rbi/BTC-USD-15m.csv'
+    data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rbi', 'BTC-USD-15m.csv')
     data = pd.read_csv(data_path)
     data.columns = data.columns.str.strip().str.lower()
     data = data.drop(columns=[col for col in data.columns if 'unnamed' in col.lower()])

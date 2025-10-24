@@ -1,8 +1,9 @@
 import pandas as pd
+import os
 from backtesting import Backtest, Strategy
 import talib
 
-path = '/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/rbi/BTC-USD-15m.csv'
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rbi', 'BTC-USD-15m.csv')
 
 data = pd.read_csv(path, parse_dates=['datetime'], index_col='datetime')
 data.columns = data.columns.str.strip().str.lower()

@@ -1,11 +1,12 @@
 from backtesting import Backtest, Strategy
+import os
 from backtesting.lib import crossover
 import pandas as pd
 import talib
 import numpy as np
 
 # Load and prepare data
-path = '/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/rbi/BTC-USD-15m.csv'
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rbi', 'BTC-USD-15m.csv')
 data = pd.read_csv(path, index_col=0, parse_dates=True)
 data.columns = data.columns.str.strip().str.lower()
 data = data.drop(columns=[col for col in data.columns if 'unnamed' in col.lower()])

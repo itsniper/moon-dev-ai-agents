@@ -10,9 +10,10 @@ import time
 import psutil
 import os
 import sys
+from ..config import DATA_DIR
 
 # Configuration Constants
-FILE_PATH = "/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/private_data/bigfollow.csv"
+FILE_PATH = os.path.join(DATA_DIR, "private_data", "bigfollow.csv")
 OPENS_PER_BATCH = 30
 TARGET_COLUMN = "wallet_address"  # Column containing the wallet addresses
 BASE_URL = "https://gmgn.ai/sol/address/"  # Base URL for GMGN.ai

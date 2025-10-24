@@ -3,6 +3,25 @@
 Built with love by Moon Dev 🚀
 """
 
+import os
+
+# 📁 Path Configuration
+# Base directory of the project
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Data directory
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+
+# Scripts directory
+SCRIPTS_DIR = os.path.join(BASE_DIR, 'scripts')
+
+# External paths (configure these for your system)
+# Path to Aster-Dex-Trading-Bots repository (if you have it)
+ASTER_BOTS_PATH = os.path.expanduser('~/Dropbox/dev/github/Aster-Dex-Trading-Bots')  # Default location
+
+# Path to moon-dev-trading-bots repository (if you have it)
+MOON_DEV_TRADING_BOTS_PATH = os.path.expanduser('~/Dropbox/dev/github/moon-dev-trading-bots')  # Default location
+
 # 🔄 Exchange Selection
 EXCHANGE = 'solana'  # Options: 'solana', 'hyperliquid'
 

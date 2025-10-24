@@ -1,10 +1,11 @@
 import os
 from datetime import datetime
 import glob
+from ..config import MOON_DEV_TRADING_BOTS_PATH, DATA_DIR
 
 # Constants
-INPUT_FOLDER = "/Users/md/Dropbox/dev/github/moon-dev-trading-bots/bots"
-OUTPUT_FOLDER = "/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/codetotext"
+INPUT_FOLDER = os.path.join(MOON_DEV_TRADING_BOTS_PATH, "bots")
+OUTPUT_FOLDER = os.path.join(DATA_DIR, "codetotext")
 
 # File extensions to include
 CODE_EXTENSIONS = ['.py', '.ipynb', '.js', '.html', '.css', '.md', '.txt']

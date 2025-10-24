@@ -1,4 +1,5 @@
 from backtesting import Backtest, Strategy
+import os
 from backtesting.lib import crossover
 import pandas as pd
 import numpy as np
@@ -95,7 +96,7 @@ class GapQuintile(Strategy):
 
         self.past_gaps.append(norm_gap)
 
-path = '/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/rbi/BTC-USD-15m.csv'
+path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'rbi', 'BTC-USD-15m.csv')
 data = clean_data(path)
 bt = Backtest(data, GapQuintile, cash=1000000, commission=0.001, exclusive_orders=True)
 stats = bt.run()
