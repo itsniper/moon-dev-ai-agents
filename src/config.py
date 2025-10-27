@@ -37,6 +37,8 @@ EXCLUDED_TOKENS = [USDC_ADDRESS, SOL_ADDRESS]
 MONITORED_TOKENS = [
     # '9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump',    # 🌬️ FART
     # 'DitHyRMQiSDhn5cnKMJV2CDDt6sVct96YrECiM49pump'     # housecoin
+    "BTC",
+    "ETH"
 ]
 
 # Moon Dev's Token Trading List 🚀

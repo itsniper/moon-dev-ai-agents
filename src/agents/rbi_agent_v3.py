@@ -38,8 +38,6 @@ until it achieves your target return. Set realistic targets!
 import subprocess
 import json
 from pathlib import Path
-from anthropic import Anthropic
-import openai
 
 # Core imports only
 import os
@@ -62,8 +60,7 @@ AI_TEMPERATURE = 0.7
 AI_MAX_TOKENS = 4000
 
 # Import model factory with proper path handling
-import sys
-sys.path.append('/Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading')
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 try:
     from src.models import model_factory
@@ -83,12 +80,12 @@ RESEARCH_CONFIG = {
 
 BACKTEST_CONFIG = {
     "type": "xai",  # Using Grok 4 Fast Reasoning for backtest coding
-    "name": "grok-4-fast-reasoning"
+    "name": "grok-code-fast-1"
 }
 
 DEBUG_CONFIG = {
     "type": "xai",  # Using Grok 4 Fast Reasoning for debugging
-    "name": "grok-4-fast-reasoning"
+    "name": "grok-code-fast-1"
 }
 
 PACKAGE_CONFIG = {
@@ -118,9 +115,6 @@ MAX_OPTIMIZATION_ITERATIONS = 10  # Max times to KEEP OPTIMIZING until target is
                                   # Higher = more chances to hit target, but takes longer
 EXECUTION_TIMEOUT = 300  # 5 minutes
 
-# DeepSeek Configuration
-DEEPSEEK_BASE_URL = "https://api.deepseek.com"
-
 # Get today's date for organizing outputs
 TODAY_DATE = datetime.now().strftime("%m_%d_%Y")
 
@@ -136,6 +130,10 @@ OPTIMIZATION_DIR = TODAY_DIR / "backtests_optimized"  # NEW for V3!
 CHARTS_DIR = TODAY_DIR / "charts"
 EXECUTION_DIR = TODAY_DIR / "execution_results"
 PROCESSED_IDEAS_LOG = DATA_DIR / "processed_ideas.log"
+
+# Backtest Data Configuration
+BACKTEST_DATA_FILE = DATA_DIR / "BTC_15m_latest.csv"
+
 
 # IDEAS file is now in the V3 folder
 IDEAS_FILE = DATA_DIR / "ideas.txt"
@@ -186,7 +184,7 @@ STRATEGY_DETAILS:
 Remember: The name must be UNIQUE and SPECIFIC to this strategy's approach!
 """
 
-BACKTEST_PROMPT = """
+BACKTEST_PROMPT = f"""
 You are Moon Dev's Backtest AI 🌙 ONLY SEND BACK CODE, NO OTHER TEXT.
 Create a backtesting.py implementation for the strategy.
 USE BACKTESTING.PY
@@ -242,7 +240,7 @@ RISK MANAGEMENT:
 
 If you need indicators use TA lib or pandas TA. 
 
-Use this data path: /Users/md/Dropbox/dev/github/moon-dev-ai-agents-for-trading/src/data/rbi/BTC-USD-15m.csv
+Use this data path: {BACKTEST_DATA_FILE}
 the above data head looks like below
 datetime, open, high, low, close, volume,
 2023-01-01 00:00:00, 16531.83, 16532.69, 16509.11, 16510.82, 231.05338022,
@@ -556,24 +554,6 @@ def log_processed_idea(idea: str, strategy_name: str = "Unknown") -> None:
         f.write(f"{idea_hash},{timestamp},{strategy_name},{idea_snippet}\n")
     
     cprint(f"📝 Logged processed idea: {strategy_name}", "green")
-
-# Include all the original functions from v1
-def init_deepseek_client():
-    """Initialize DeepSeek client with proper error handling"""
-    try:
-        deepseek_key = os.getenv("DEEPSEEK_KEY")
-        if not deepseek_key:
-            cprint("⚠️ DEEPSEEK_KEY not found - DeepSeek models will not be available", "yellow")
-            return None
-            
-        client = openai.OpenAI(
-            api_key=deepseek_key,
-            base_url=DEEPSEEK_BASE_URL
-        )
-        return client
-    except Exception as e:
-        print(f"❌ Error initializing DeepSeek client: {str(e)}")
-        return None
 
 def has_nan_results(execution_result: dict) -> bool:
     """Check if backtest results contain NaN values indicating no trades"""
