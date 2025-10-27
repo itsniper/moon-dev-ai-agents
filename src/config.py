@@ -23,7 +23,7 @@ ASTER_BOTS_PATH = os.path.expanduser('~/Dropbox/dev/github/Aster-Dex-Trading-Bot
 MOON_DEV_TRADING_BOTS_PATH = os.path.expanduser('~/Dropbox/dev/github/moon-dev-trading-bots')  # Default location
 
 # 🔄 Exchange Selection
-EXCHANGE = 'solana'  # Options: 'solana', 'hyperliquid'
+EXCHANGE = 'hyperliquid'  # Options: 'solana', 'hyperliquid'
 
 # 💰 Trading Configuration
 USDC_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"  # Never trade or close

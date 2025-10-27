@@ -4,17 +4,22 @@ Collects Open-High-Low-Close-Volume data for specified tokens
 Built with love by Moon Dev 🚀
 """
 
+import os
+import sys
+import argparse
+
+# Add project root to Python path (temporary calculation to import BASE_DIR)
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(project_root)
+
 from src.config import *
 from src import nice_funcs as n
 from src import nice_funcs_hyperliquid as hl
-from src import nice_funcs_aster as aster
 import pandas as pd
 from datetime import datetime
-import os
-from termcolor import colored, cprint
-import time
+from termcolor import cprint
 
-def collect_token_data(token, days_back=DAYSBACK_4_DATA, timeframe=DATA_TIMEFRAME, exchange="SOLANA"):
+def collect_token_data(token, days_back=DAYSBACK_4_DATA, timeframe=DATA_TIMEFRAME, exchange="HYPERLIQUID"):
     """Collect OHLCV data for a single token
 
     Args:
@@ -65,7 +70,7 @@ def collect_token_data(token, days_back=DAYSBACK_4_DATA, timeframe=DATA_TIMEFRAM
         
         # Save data if configured
         if SAVE_OHLCV_DATA:
-            save_path = f"data/{token}_latest.csv"
+            save_path = f"data/ohlcv/{token}_{timeframe}_latest.csv"
         else:
             save_path = f"temp_data/{token}_latest.csv"
             
@@ -74,7 +79,7 @@ def collect_token_data(token, days_back=DAYSBACK_4_DATA, timeframe=DATA_TIMEFRAM
         
         # Save to CSV
         data.to_csv(save_path)
-        cprint(f"💾 Moon Dev's AI Agent cached data for {token[:4]}", "white", "on_green")
+        cprint(f"💾 Moon Dev's AI Agent cached data for {token[:4]} to {save_path}", "white", "on_green")
         
         return data
         
@@ -82,7 +87,7 @@ def collect_token_data(token, days_back=DAYSBACK_4_DATA, timeframe=DATA_TIMEFRAM
         cprint(f"❌ Moon Dev's AI Agent encountered an error: {str(e)}", "white", "on_red")
         return None
 
-def collect_all_tokens(tokens=None, days_back=None, timeframe=None, exchange="SOLANA"):
+def collect_all_tokens(tokens=None, days_back=None, timeframe=None, exchange="HYPERLIQUID"):
     """
     Collect OHLCV data for all monitored tokens
 
@@ -116,10 +121,18 @@ def collect_all_tokens(tokens=None, days_back=None, timeframe=None, exchange="SO
     return market_data
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Collect OHLCV data for a single token")
+    parser.add_argument("token", help="Token symbol (e.g., BTC) or address")
+    parser.add_argument("--days_back", type=int, default=DAYSBACK_4_DATA, help="Days of historical data")
+    parser.add_argument("--timeframe", default=DATA_TIMEFRAME, help="Candle timeframe (e.g., 1H)")
+    parser.add_argument("--exchange", default="HYPERLIQUID", choices=["SOLANA", "ASTER", "HYPERLIQUID"], help="Exchange to use")
+    
+    args = parser.parse_args()
+    
     try:
-        collect_all_tokens()
+        collect_token_data(args.token, args.days_back, args.timeframe, args.exchange)
     except KeyboardInterrupt:
         print("\n👋 Moon Dev OHLCV Collector shutting down gracefully...")
     except Exception as e:
         print(f"❌ Error: {str(e)}")
-        print("🔧 Moon Dev suggests checking the logs and trying again!") 
+        print("🔧 Moon Dev suggests checking the logs and trying again!")
