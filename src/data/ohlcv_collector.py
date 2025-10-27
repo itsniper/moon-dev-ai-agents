@@ -70,7 +70,7 @@ def collect_token_data(token, days_back=DAYSBACK_4_DATA, timeframe=DATA_TIMEFRAM
         
         # Save data if configured
         if SAVE_OHLCV_DATA:
-            save_path = f"data/ohlcv/{token}_{timeframe}_latest.csv"
+            save_path = f"{DATA_DIR}/ohlcv/{token}_{timeframe}_latest.csv"
         else:
             save_path = f"temp_data/{token}_latest.csv"
             
