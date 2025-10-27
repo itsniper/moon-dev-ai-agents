@@ -69,13 +69,9 @@ max_usd_order_size = 15  # Max order size for HyperLiquid
 ## Step 5: Test Your Setup
 
 ### Quick Connection Test
-```python
-# Test connection (run this in Python)
-from src.exchange_manager import ExchangeManager
-
-em = ExchangeManager()
-print(f"Balance: ${em.get_balance():.2f}")
-print(f"Account Value: ${em.get_account_value():.2f}")
+```bash
+# Run the basic test
+python src/scripts/test_hyperliquid_basic.py
 ```
 
 ### Full Test Suite

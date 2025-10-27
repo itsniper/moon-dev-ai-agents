@@ -8,7 +8,7 @@ import os
 import sys
 import argparse
 
-# Add project root to Python path (temporary calculation to import BASE_DIR)
+# Add project root to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(project_root)
 
