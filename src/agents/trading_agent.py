@@ -136,16 +136,16 @@ LEVERAGE = 10                    # Leverage multiplier (1-125x on Aster/HyperLiq
                                  # Note: Only applies to Aster and HyperLiquid (ignored on Solana)
 
 # Stop Loss & Take Profit
-STOP_LOSS_PERCENTAGE = 5.0       # % loss to trigger stop loss exit (e.g., 5.0 = -5%)
+STOP_LOSS_PERCENTAGE = 2.5       # % loss to trigger stop loss exit (e.g., 5.0 = -5%)
 TAKE_PROFIT_PERCENTAGE = 5.0     # % gain to trigger take profit exit (e.g., 5.0 = +5%)
 PNL_CHECK_INTERVAL = 180           # Seconds between P&L checks when position is open
 
 # Legacy settings (kept for compatibility, not used in new logic)
-usd_size = 25                    # [DEPRECATED] Use MAX_POSITION_PERCENTAGE instead
+usd_size = 75                    # [DEPRECATED] Use MAX_POSITION_PERCENTAGE instead
 max_usd_order_size = 3           # Maximum order chunk size in USD (for Solana chunking)
 
 # 📊 MARKET DATA COLLECTION
-DAYSBACK_4_DATA = 3              # Days of historical data to fetch
+DAYSBACK_4_DATA = 2              # Days of historical data to fetch
 DATA_TIMEFRAME = '5m'            # Bar timeframe: 1m, 3m, 5m, 15m, 30m, 1H, 2H, 4H, 6H, 8H, 12H, 1D, 3D, 1W, 1M
                                  # Current: 3 days @ 1H = ~72 bars
                                  # For 15-min: '15m' = ~288 bars
@@ -169,17 +169,17 @@ MONITORED_TOKENS = [
     #'9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump',    # 🌬️ FART (DISABLED)
     #'DitHyRMQiSDhn5cnKMJV2CDDt6sVct96YrECiM49pump',   # 🏠 housecoin (ACTIVE)
     'BTC',
-    'ETH',
-    'SOL'
+    #'ETH',
+    #'SOL'
 ]
 
 # For ASTER/HYPERLIQUID exchanges: Use trading symbols
 # ⚠️ IMPORTANT: Only used when EXCHANGE = "ASTER" or "HYPERLIQUID"
 # Add symbols you want to trade (e.g., BTC, ETH, SOL, etc.)
 SYMBOLS = [
-    'BTC',      # Bitcoin
-    'ETH',     # Ethereum
-    'SOL',     # Solana
+    'BTC',     # Bitcoin
+    #'ETH',     # Ethereum
+    #'SOL',     # Solana
 ]
 
 # Example: To trade multiple tokens, uncomment the ones you want:
@@ -371,30 +371,30 @@ def monitor_position_pnl(token, check_interval=PNL_CHECK_INTERVAL):
                 # Check stop loss
                 if pnl_pct <= -STOP_LOSS_PERCENTAGE:
                     cprint(f"🛑 STOP LOSS HIT! P&L: {pnl_pct:.2f}% (target: -{STOP_LOSS_PERCENTAGE}%)", "red", attrs=['bold'])
-                    cprint(f"🔄 Closing position with limit orders...", "yellow")
+                    cprint(f"🔄 Closing position with market order...", "yellow")
 
-                    # Close position using limit sell (for longs) or limit buy (for shorts)
-                    if position['position_amount'] > 0:
-                        # Long position - use limit_sell
-                        n.limit_sell(token, position_size, slippage=0, leverage=LEVERAGE)
-                    else:
-                        # Short position - use limit_buy
-                        n.limit_buy(token, position_size, slippage=0, leverage=LEVERAGE)
+                    # Close position using appropriate method for each exchange
+                    if EXCHANGE == "HYPERLIQUID":
+                        n.close_position(token, account)
+                    elif EXCHANGE == "ASTER":
+                        n.chunk_kill(token, 1000000, 0)  # Large chunk size to close all at once
+                    else:  # SOLANA
+                        n.kill_switch(token)  # Close entire position
 
                     return True
 
                 # Check take profit
                 if pnl_pct >= TAKE_PROFIT_PERCENTAGE:
                     cprint(f"🎯 TAKE PROFIT HIT! P&L: {pnl_pct:.2f}% (target: +{TAKE_PROFIT_PERCENTAGE}%)", "green", attrs=['bold'])
-                    cprint(f"🔄 Closing position with limit orders...", "yellow")
+                    cprint(f"🔄 Closing position with market order...", "yellow")
 
-                    # Close position using limit sell (for longs) or limit buy (for shorts)
-                    if position['position_amount'] > 0:
-                        # Long position - use limit_sell
-                        n.limit_sell(token, position_size, slippage=0, leverage=LEVERAGE)
-                    else:
-                        # Short position - use limit_buy
-                        n.limit_buy(token, position_size, slippage=0, leverage=LEVERAGE)
+                    # Close position using appropriate method for each exchange
+                    if EXCHANGE == "HYPERLIQUID":
+                        n.close_position(token, account)
+                    elif EXCHANGE == "ASTER":
+                        n.chunk_kill(token, 1000000, 0)  # Large chunk size to close all at once
+                    else:  # SOLANA
+                        n.kill_switch(token)  # Close entire position
 
                     return True
 
