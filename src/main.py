@@ -28,7 +28,7 @@ load_dotenv()
 # Agent Configuration
 ACTIVE_AGENTS = {
     'risk': False,      # Risk management agent
-    'trading': False,   # LLM trading agent
+    'trading': True,   # LLM trading agent
     'strategy': False,  # Strategy-based trading agent
     'copybot': False,   # CopyBot agent
     'sentiment': False, # Run sentiment_agent.py directly instead

@@ -91,11 +91,11 @@ SLEEP_BETWEEN_RUNS_MINUTES = 15  # How long to sleep between agent runs 🕒
 USE_PERCENTAGE = False  # If True, use percentage-based limits. If False, use USD-based limits
 
 # USD-based limits (used if USE_PERCENTAGE is False)
-MAX_LOSS_USD = 25  # Maximum loss in USD before stopping trading
-MAX_GAIN_USD = 25 # Maximum gain in USD before stopping trading
+MAX_LOSS_USD = 15  # Maximum loss in USD before stopping trading
+MAX_GAIN_USD = 15 # Maximum gain in USD before stopping trading
 
 # USD MINIMUM BALANCE RISK CONTROL
-MINIMUM_BALANCE_USD = 50  # If balance falls below this, risk agent will consider closing all positions
+MINIMUM_BALANCE_USD = 20  # If balance falls below this, risk agent will consider closing all positions
 USE_AI_CONFIRMATION = True  # If True, consult AI before closing positions. If False, close immediately on breach
 
 # Percentage-based limits (used if USE_PERCENTAGE is True)

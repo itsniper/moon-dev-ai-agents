@@ -81,17 +81,17 @@ Built with love by Moon Dev 🚀
 # ============================================================================
 
 # 🏦 EXCHANGE SELECTION
-EXCHANGE = "ASTER"  # Options: "ASTER", "HYPERLIQUID", "SOLANA"
+EXCHANGE = "HYPERLIQUID"  # Options: "ASTER", "HYPERLIQUID", "SOLANA"
                      # - "ASTER" = Aster DEX futures (supports long/short)
                      # - "HYPERLIQUID" = HyperLiquid perpetuals (supports long/short)
                      # - "SOLANA" = Solana on-chain DEX (long only)
 
 # 🌊 AI MODE SELECTION
-USE_SWARM_MODE = True  # True = 6-model swarm consensus (~45-60s per token)
+USE_SWARM_MODE = False  # True = 6-model swarm consensus (~45-60s per token)
                         # False = Single model fast execution (~10s per token)
 
 # 📈 TRADING MODE SETTINGS
-LONG_ONLY = True  # True = Long positions only (works on all exchanges)
+LONG_ONLY = False  # True = Long positions only (works on all exchanges)
                   # False = Long & Short positions (works on Aster/HyperLiquid)
                   #
                   # When LONG_ONLY = True:
@@ -108,15 +108,15 @@ LONG_ONLY = True  # True = Long positions only (works on all exchanges)
 
 # 🤖 SINGLE MODEL SETTINGS (only used when USE_SWARM_MODE = False)
 AI_MODEL_TYPE = 'xai'  # Options: 'groq', 'openai', 'claude', 'deepseek', 'xai', 'ollama'
-AI_MODEL_NAME = None   # None = use default, or specify: 'grok-4-fast-reasoning', 'claude-3-5-sonnet-latest', etc.
+AI_MODEL_NAME = 'grok-4-fast-reasoning'   # None = use default, or specify: 'grok-4-fast-reasoning', 'claude-3-5-sonnet-latest', etc.
 AI_TEMPERATURE = 0.7   # Creativity vs precision (0-1)
 AI_MAX_TOKENS = 1024   # Max tokens for AI response
 
 # 💰 POSITION SIZING & RISK MANAGEMENT
-USE_PORTFOLIO_ALLOCATION = False # True = Use AI for portfolio allocation across multiple tokens
+USE_PORTFOLIO_ALLOCATION = True # True = Use AI for portfolio allocation across multiple tokens
                                  # False = Simple mode - trade single token at MAX_POSITION_PERCENTAGE
 
-MAX_POSITION_PERCENTAGE = 90     # % of account balance to use as MARGIN per position (0-100)
+MAX_POSITION_PERCENTAGE = 20     # % of account balance to use as MARGIN per position (0-100)
                                  # How it works per exchange:
                                  # - ASTER/HYPERLIQUID: % of balance used as MARGIN (then multiplied by leverage)
                                  #   Example: $100 balance, 90% = $90 margin
@@ -124,7 +124,10 @@ MAX_POSITION_PERCENTAGE = 90     # % of account balance to use as MARGIN per pos
                                  # - SOLANA: Uses % of USDC balance directly (no leverage)
                                  #   Example: 100 USDC, 90% = 90 USDC position
 
-LEVERAGE = 9                    # Leverage multiplier (1-125x on Aster/HyperLiquid)
+CASH_PERCENTAGE = 20             # Minimum % to keep in USDC as safety buffer (0-100)
+                                 # Example: 20% of $100 balance = $20 minimum cash buffer
+
+LEVERAGE = 10                    # Leverage multiplier (1-125x on Aster/HyperLiquid)
                                  # Higher leverage = bigger position with same margin, higher liquidation risk
                                  # Examples with $100 margin:
                                  #           5x = $100 margin → $500 notional position
@@ -135,7 +138,7 @@ LEVERAGE = 9                    # Leverage multiplier (1-125x on Aster/HyperLiqu
 # Stop Loss & Take Profit
 STOP_LOSS_PERCENTAGE = 5.0       # % loss to trigger stop loss exit (e.g., 5.0 = -5%)
 TAKE_PROFIT_PERCENTAGE = 5.0     # % gain to trigger take profit exit (e.g., 5.0 = +5%)
-PNL_CHECK_INTERVAL = 5           # Seconds between P&L checks when position is open
+PNL_CHECK_INTERVAL = 180           # Seconds between P&L checks when position is open
 
 # Legacy settings (kept for compatibility, not used in new logic)
 usd_size = 25                    # [DEPRECATED] Use MAX_POSITION_PERCENTAGE instead
@@ -143,14 +146,14 @@ max_usd_order_size = 3           # Maximum order chunk size in USD (for Solana c
 
 # 📊 MARKET DATA COLLECTION
 DAYSBACK_4_DATA = 3              # Days of historical data to fetch
-DATA_TIMEFRAME = '1H'            # Bar timeframe: 1m, 3m, 5m, 15m, 30m, 1H, 2H, 4H, 6H, 8H, 12H, 1D, 3D, 1W, 1M
+DATA_TIMEFRAME = '5m'            # Bar timeframe: 1m, 3m, 5m, 15m, 30m, 1H, 2H, 4H, 6H, 8H, 12H, 1D, 3D, 1W, 1M
                                  # Current: 3 days @ 1H = ~72 bars
                                  # For 15-min: '15m' = ~288 bars
 SAVE_OHLCV_DATA = False          # True = save data permanently, False = temp data only
 
 # ⚡ TRADING EXECUTION SETTINGS
 slippage = 199                   # Slippage tolerance (199 = ~2%)
-SLEEP_BETWEEN_RUNS_MINUTES = 15  # Minutes between trading cycles
+SLEEP_BETWEEN_RUNS_MINUTES = 3  # Minutes between trading cycles
 
 # 🎯 TOKEN CONFIGURATION
 
@@ -163,8 +166,11 @@ EXCLUDED_TOKENS = [USDC_ADDRESS, SOL_ADDRESS]
 # Each token takes ~45-60 seconds in swarm mode
 # Comment out tokens you don't want to trade (add # at start of line)
 MONITORED_TOKENS = [
-    '9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump',    # 🌬️ FART (DISABLED)
+    #'9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump',    # 🌬️ FART (DISABLED)
     #'DitHyRMQiSDhn5cnKMJV2CDDt6sVct96YrECiM49pump',   # 🏠 housecoin (ACTIVE)
+    'BTC',
+    'ETH',
+    'SOL'
 ]
 
 # For ASTER/HYPERLIQUID exchanges: Use trading symbols
@@ -172,8 +178,8 @@ MONITORED_TOKENS = [
 # Add symbols you want to trade (e.g., BTC, ETH, SOL, etc.)
 SYMBOLS = [
     'BTC',      # Bitcoin
-    #'ETH',     # Ethereum
-    #'SOL',     # Solana
+    'ETH',     # Ethereum
+    'SOL',     # Solana
 ]
 
 # Example: To trade multiple tokens, uncomment the ones you want:
@@ -318,20 +324,41 @@ def monitor_position_pnl(token, check_interval=PNL_CHECK_INTERVAL):
         cprint(f"\n👁️  Monitoring {token} position for P&L targets...", "cyan", attrs=['bold'])
         cprint(f"   Stop Loss: -{STOP_LOSS_PERCENTAGE}% | Take Profit: +{TAKE_PROFIT_PERCENTAGE}%", "white")
 
+        # Get account for exchanges that need it
+        account = None
+        if EXCHANGE == "HYPERLIQUID":
+            account = n._get_account_from_env()
+
         while True:
             # Get current position
             if EXCHANGE in ["ASTER", "HYPERLIQUID"]:
-                position = n.get_position(token)
+                if EXCHANGE == "HYPERLIQUID":
+                    positions, im_in_pos, pos_size, _, _, pnl_perc, is_long = n.get_position(token, account)
+                    if not im_in_pos or float(pos_size) == 0:
+                        cprint(f"✅ No position found for {token}", "green")
+                        return True
+                    # Convert to dict format for consistency
+                    position = {
+                        'position_amount': float(pos_size),
+                        'pnl_percentage': pnl_perc,
+                        'pnl': 0,  # Not available from tuple
+                        'mark_price': 0,  # Not available from tuple
+                        'is_long': is_long
+                    }
+                else:  # ASTER
+                    position = n.get_position(token)
+                if not position or position.get('position_amount', 0) == 0:
+                    cprint(f"✅ No position found for {token}", "green")
+                    return True
             else:
-                position_usd = n.get_token_balance_usd(token)
+                if EXCHANGE == "HYPERLIQUID":
+                    position_usd = n.get_token_balance_usd(token, account)
+                else:
+                    position_usd = n.get_token_balance_usd(token)
                 if position_usd == 0:
                     cprint(f"✅ Position closed for {token}", "green")
                     return True
                 position = {"position_amount": position_usd}  # Simplified for Solana
-
-            if not position or (EXCHANGE in ["ASTER", "HYPERLIQUID"] and position.get('position_amount', 0) == 0):
-                cprint(f"✅ No position found for {token}", "green")
-                return True
 
             # For Aster/HyperLiquid, check P&L percentage
             if EXCHANGE in ["ASTER", "HYPERLIQUID"]:
@@ -773,7 +800,7 @@ Given:
 Provide a portfolio allocation that:
 1. Never exceeds max position size per token
 2. Maintains minimum cash buffer
-3. Returns allocation as a JSON object with token addresses as keys and USD amounts as values
+3. Returns allocation as a JSON object with token symbols or addresses (as given to you) as keys and USD amounts as values
 4. Uses exact USDC address: {USDC_ADDRESS} for cash allocation
 
 Example format:
@@ -821,6 +848,11 @@ Example format:
         try:
             print("\n🚀 Moon Dev executing portfolio allocations...")
             
+            # Get account for exchanges that need it
+            account = None
+            if EXCHANGE == "HYPERLIQUID":
+                account = n._get_account_from_env()
+            
             for token, amount in allocation_dict.items():
                 # Skip USDC and other excluded tokens
                 if token in EXCLUDED_TOKENS:
@@ -831,7 +863,10 @@ Example format:
                 
                 try:
                     # Get current position value
-                    current_position = n.get_token_balance_usd(token)
+                    if EXCHANGE == "HYPERLIQUID":
+                        current_position = n.get_token_balance_usd(token, account)
+                    else:
+                        current_position = n.get_token_balance_usd(token)
                     target_allocation = amount
                     
                     print(f"🎯 Target allocation: ${target_allocation:.2f} USD")
@@ -861,6 +896,11 @@ Example format:
         """Check and exit positions based on SELL recommendations"""
         cprint("\n🔄 Checking for positions to exit...", "white", "on_blue")
 
+        # Get account for exchanges that need it
+        account = None
+        if EXCHANGE == "HYPERLIQUID":
+            account = n._get_account_from_env()
+
         for _, row in self.recommendations_df.iterrows():
             token = row['token']
             token_short = token[:8] + "..." if len(token) > 8 else token
@@ -872,7 +912,10 @@ Example format:
             action = row['action']
 
             # Check if we have a position
-            current_position = n.get_token_balance_usd(token)
+            if EXCHANGE == "HYPERLIQUID":
+                current_position = n.get_token_balance_usd(token, account)
+            else:
+                current_position = n.get_token_balance_usd(token)
 
             cprint(f"\n{'='*60}", "cyan")
             cprint(f"🎯 Token: {token_short}", "cyan", attrs=['bold'])
@@ -948,15 +991,26 @@ Example format:
                                 # Verify position was actually opened
                                 time.sleep(2)  # Brief delay for order to settle
                                 if EXCHANGE in ["ASTER", "HYPERLIQUID"]:
-                                    position = n.get_position(token)
-                                    if position and position.get('position_amount', 0) != 0:
-                                        pnl_pct = position.get('pnl_percentage', 0)
-                                        position_usd = abs(position.get('position_amount', 0)) * position.get('mark_price', 0)
-                                        cprint(f"📊 Confirmed: ${position_usd:,.2f} position | P&L: {pnl_pct:+.2f}%", "green", attrs=['bold'])
-                                    else:
-                                        cprint(f"⚠️  Warning: Position verification failed - no position found!", "yellow")
+                                    if EXCHANGE == "HYPERLIQUID":
+                                        positions, im_in_pos, pos_size, _, _, pnl_perc, is_long = n.get_position(token, account)
+                                        if im_in_pos and float(pos_size) != 0:
+                                            position_usd = abs(float(pos_size)) * float(positions[0].get('entryPx', 0)) if positions else 0
+                                            cprint(f"📊 Confirmed: ${position_usd:,.2f} position | P&L: {pnl_perc:+.2f}%", "green", attrs=['bold'])
+                                        else:
+                                            cprint(f"⚠️  Warning: Position verification failed - no position found!", "yellow")
+                                    else:  # ASTER
+                                        position = n.get_position(token)
+                                        if position and position.get('position_amount', 0) != 0:
+                                            pnl_pct = position.get('pnl_percentage', 0)
+                                            position_usd = abs(position.get('position_amount', 0)) * position.get('mark_price', 0)
+                                            cprint(f"📊 Confirmed: ${position_usd:,.2f} position | P&L: {pnl_pct:+.2f}%", "green", attrs=['bold'])
+                                        else:
+                                            cprint(f"⚠️  Warning: Position verification failed - no position found!", "yellow")
                                 else:
-                                    position_usd = n.get_token_balance_usd(token)
+                                    if EXCHANGE == "HYPERLIQUID":
+                                        position_usd = n.get_token_balance_usd(token, account)
+                                    else:
+                                        position_usd = n.get_token_balance_usd(token)
                                     if position_usd > 0:
                                         cprint(f"📊 Confirmed: ${position_usd:,.2f} position", "green", attrs=['bold'])
                                     else:
@@ -1158,14 +1212,23 @@ def main():
             has_position = False
             monitored_token = None
 
+            # Get account for exchanges that need it
+            account = None
+            if EXCHANGE == "HYPERLIQUID":
+                account = n._get_account_from_env()
+
             for token in SYMBOLS if EXCHANGE in ["ASTER", "HYPERLIQUID"] else MONITORED_TOKENS:
                 if EXCHANGE in ["ASTER", "HYPERLIQUID"]:
-                    position = n.get_position(token)
-                    if position and position.get('position_amount', 0) != 0:
-                        has_position = True
+                    if EXCHANGE == "HYPERLIQUID":
+                        positions, im_in_pos, pos_size, _, _, _, _ = n.get_position(token, account)
+                        has_position = im_in_pos and float(pos_size) != 0
+                    else:  # ASTER
+                        position = n.get_position(token)
+                        has_position = position and position.get('position_amount', 0) != 0
+                    if has_position:
                         monitored_token = token
                         break
-                else:
+                else:  # SOLANA
                     position_usd = n.get_token_balance_usd(token)
                     if position_usd > 0:
                         has_position = True
