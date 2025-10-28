@@ -447,22 +447,20 @@ def calculate_position_size(account_balance):
         account_balance: Current account balance in USD
 
     Returns:
-        float: Position size in USD (notional value)
+        float: Position size in USD (margin amount for leveraged, notional for spot)
     """
     if EXCHANGE in ["ASTER", "HYPERLIQUID"]:
         # For leveraged exchanges: MAX_POSITION_PERCENTAGE is the MARGIN to use
-        # Notional position = margin × leverage
         margin_to_use = account_balance * (MAX_POSITION_PERCENTAGE / 100)
-        notional_position = margin_to_use * LEVERAGE
 
         cprint(f"\n📊 Position Calculation ({EXCHANGE}):", "yellow", attrs=['bold'])
         cprint(f"   💵 Account Balance: ${account_balance:,.2f}", "white")
         cprint(f"   📈 Max Position %: {MAX_POSITION_PERCENTAGE}%", "white")
         cprint(f"   💰 Margin to Use: ${margin_to_use:,.2f}", "green", attrs=['bold'])
         cprint(f"   ⚡ Leverage: {LEVERAGE}x", "white")
-        cprint(f"   💎 Notional Position: ${notional_position:,.2f}", "cyan", attrs=['bold'])
+        cprint(f"   💎 Notional Position: ${margin_to_use * LEVERAGE:,.2f}", "cyan", attrs=['bold'])
 
-        return notional_position
+        return margin_to_use
     else:
         # For Solana: No leverage, direct position size
         position_size = account_balance * (MAX_POSITION_PERCENTAGE / 100)
@@ -778,8 +776,9 @@ Strategy Signals Available:
         """Get AI-recommended portfolio allocation"""
         try:
             cprint("\n💰 Calculating optimal portfolio allocation...", "cyan")
-            max_position_size = usd_size * (MAX_POSITION_PERCENTAGE / 100)
-            cprint(f"🎯 Maximum position size: ${max_position_size:.2f} ({MAX_POSITION_PERCENTAGE}% of ${usd_size:.2f})", "cyan")
+            account_balance = get_account_balance()
+            max_position_size = account_balance * (MAX_POSITION_PERCENTAGE / 100)
+            cprint(f"🎯 Maximum position size: ${max_position_size:.2f} ({MAX_POSITION_PERCENTAGE}% of ${account_balance:.2f})", "cyan")
 
             # Get allocation from AI via model factory
             # Use appropriate token list based on exchange
@@ -791,7 +790,7 @@ Strategy Signals Available:
             allocation_prompt = f"""You are Moon Dev's Portfolio Allocation AI 🌙
 
 Given:
-- Total portfolio size: ${usd_size}
+- Total portfolio size: ${account_balance}
 - Maximum position size: ${max_position_size} ({MAX_POSITION_PERCENTAGE}% of total)
 - Minimum cash (USDC) buffer: {CASH_PERCENTAGE}%
 - Available tokens: {available_tokens}
@@ -827,8 +826,8 @@ Example format:
                 
             # Validate allocation totals
             total_allocated = sum(allocations.values())
-            if total_allocated > usd_size:
-                cprint(f"❌ Total allocation ${total_allocated:.2f} exceeds portfolio size ${usd_size:.2f}", "red")
+            if total_allocated > account_balance:
+                cprint(f"❌ Total allocation ${total_allocated:.2f} exceeds portfolio size ${account_balance:.2f}", "red")
                 return None
                 
             # Print allocations
@@ -876,7 +875,9 @@ Example format:
                         print(f"✨ Executing entry for {token}")
                         # Pass leverage for Aster/HyperLiquid, skip for Solana
                         if EXCHANGE in ["ASTER", "HYPERLIQUID"]:
-                            n.ai_entry(token, amount, leverage=LEVERAGE)
+                            # Convert margin amount to notional for ai_entry
+                            notional_amount = amount * LEVERAGE
+                            n.ai_entry(token, notional_amount, leverage=LEVERAGE)
                         else:
                             n.ai_entry(token, amount)
                         print(f"✅ Entry complete for {token}")
@@ -949,10 +950,12 @@ Example format:
                         # SHORT MODE ENABLED - Open short position
                         # Get account balance and calculate position size
                         account_balance = get_account_balance()
-                        position_size = calculate_position_size(account_balance)
+                        margin_size = calculate_position_size(account_balance)
+                        # Convert margin to notional for the trading functions
+                        position_size = margin_size * LEVERAGE
 
                         cprint(f"📉 SELL signal with no position - OPENING SHORT", "white", "on_red")
-                        cprint(f"⚡ {EXCHANGE} mode: Opening ${position_size:,.2f} short position", "yellow")
+                        cprint(f"⚡ {EXCHANGE} mode: Opening ${position_size:,.2f} short position (${margin_size:.2f} margin)", "yellow")
                         try:
                             # Check if we have the open_short function (Aster/HyperLiquid)
                             if hasattr(n, 'open_short'):
@@ -976,9 +979,11 @@ Example format:
                     else:
                         # Simple mode: Open position at MAX_POSITION_PERCENTAGE
                         account_balance = get_account_balance()
-                        position_size = calculate_position_size(account_balance)
+                        margin_size = calculate_position_size(account_balance)
+                        # Convert margin to notional for the trading functions
+                        position_size = margin_size * LEVERAGE if EXCHANGE in ["ASTER", "HYPERLIQUID"] else margin_size
 
-                        cprint(f"💰 Opening position at MAX_POSITION_PERCENTAGE", "white", "on_green")
+                        cprint(f"💰 Opening position at MAX_POSITION_PERCENTAGE (${position_size:,.2f} notional)", "white", "on_green")
                         try:
                             if EXCHANGE in ["ASTER", "HYPERLIQUID"]:
                                 success = n.ai_entry(token, position_size, leverage=LEVERAGE)
@@ -1112,6 +1117,10 @@ Example format:
         try:
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             cprint(f"\n⏰ AI Agent Run Starting at {current_time}", "white", "on_green")
+            
+            # Clear previous recommendations at the start of each cycle
+            self.recommendations_df = pd.DataFrame(columns=['token', 'action', 'confidence', 'reasoning'])
+            cprint("🧹 Cleared previous trading recommendations", "cyan")
             
             # Collect OHLCV data for all tokens using this agent's config
             # Use SYMBOLS for Aster/HyperLiquid, MONITORED_TOKENS for Solana
