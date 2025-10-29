@@ -559,6 +559,44 @@ class TradingAgent:
             cprint(f"❌ AI model error: {e}", "red")
             return None
 
+    def _save_trading_prompts_for_debugging(self, token, system_prompt, user_content, mode="single"):
+        """Save full trading prompts to temp_data for debugging purposes"""
+        try:
+            # Create temp_data directory if it doesn't exist
+            temp_dir = "temp_data"
+            os.makedirs(temp_dir, exist_ok=True)
+
+            # Generate timestamp and filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"trading_prompt_{token[:8]}_{mode}_{timestamp}.md"
+            filepath = os.path.join(temp_dir, filename)
+
+            # Format the content for the markdown file
+            content = f"""# Trading Agent Debug - {token[:8]} ({mode} mode)
+**Timestamp:** {datetime.now().isoformat()}
+**Token:** {token}
+**Mode:** {mode}
+
+## System Prompt
+```
+{system_prompt}
+```
+
+## User Content (Market Data)
+```
+{user_content}
+```
+"""
+
+            # Save to file
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            cprint(f"📝 Debug prompts saved to: {filepath}", "blue")
+
+        except Exception as e:
+            cprint(f"⚠️ Failed to save debug prompts: {e}", "yellow")
+
     def _format_market_data_for_ai(self, token, market_data):
         """Format market data into a clean, readable format for AI agent analysis"""
         try:
@@ -708,6 +746,9 @@ Strategy Signals Available:
                 # Combine prompt inputs and outputs for swarm
                 swarm_trading_prompt = TRADING_PROMPT_INPUTS.format(strategy_context=strategy_context) + SWARM_TRADING_PROMPT_OUTPUTS
 
+                # Save prompts for debugging
+                self._save_trading_prompts_for_debugging(token, swarm_trading_prompt, formatted_data, mode="swarm")
+
                 # Query the swarm (takes ~45-60 seconds)
                 swarm_result = self.swarm.query(
                     prompt=formatted_data,
@@ -741,6 +782,9 @@ Strategy Signals Available:
 
                 # Combine prompt inputs and outputs for single AI model
                 trading_prompt = TRADING_PROMPT_INPUTS.format(strategy_context=strategy_context) + TRADING_PROMPT_OUTPUTS
+
+                # Save prompts for debugging
+                self._save_trading_prompts_for_debugging(token, trading_prompt, formatted_data, mode="single")
 
                 # Call AI model via model factory
                 response = self.chat_with_ai(
