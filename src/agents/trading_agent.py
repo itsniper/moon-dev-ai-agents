@@ -46,9 +46,6 @@ CONFIGURATION:
    - When LONG/SHORT: SELL can close long OR open short
 
    💰 Position Sizing (lines 113-120):
-   - usd_size: $25 target NOTIONAL position (total exposure)
-     * On Aster/HyperLiquid with 5x leverage: $25 position = $5 margin
-     * Leverage configured in nice_funcs_aster.py (DEFAULT_LEVERAGE)
    - max_usd_order_size: $3 order chunks
    - MAX_POSITION_PERCENTAGE: 30% max per position
    - CASH_PERCENTAGE: 20% min cash buffer
@@ -113,6 +110,7 @@ AI_TEMPERATURE = 0.7   # Creativity vs precision (0-1)
 AI_MAX_TOKENS = 1024   # Max tokens for AI response
 
 # 💰 POSITION SIZING & RISK MANAGEMENT
+TRADE_MIN_CONFIDENCE = 0.7      # Minimum confidence level (0-1) to act on BUY/SELL signals
 USE_PORTFOLIO_ALLOCATION = True # True = Use AI for portfolio allocation across multiple tokens
                                  # False = Simple mode - trade single token at MAX_POSITION_PERCENTAGE
 
@@ -141,7 +139,6 @@ TAKE_PROFIT_PERCENTAGE = 5.0     # % gain to trigger take profit exit (e.g., 5.0
 PNL_CHECK_INTERVAL = 180           # Seconds between P&L checks when position is open
 
 # Legacy settings (kept for compatibility, not used in new logic)
-usd_size = 75                    # [DEPRECATED] Use MAX_POSITION_PERCENTAGE instead
 max_usd_order_size = 3           # Maximum order chunk size in USD (for Solana chunking)
 
 # 📊 MARKET DATA COLLECTION
@@ -213,16 +210,48 @@ Market Data Criteria:
 
 # Prompt for the outputs from the trading agent in single-model mode.
 TRADING_PROMPT_OUTPUTS = """
-Respond in this exact format:
-1. First line must be one of: BUY, SELL, or NOTHING (in caps)
-2. Then explain your reasoning, including:
-   - Technical analysis
-   - Strategy signals analysis (if available)
-   - Risk factors
-   - Market conditions
-   - Confidence level (as a percentage, e.g. 75%)
+Respond with EXACTLY this format:
+
+<output_format>
+ACTION: [BUY/SELL/NOTHING]
+CONFIDENCE: [number only, e.g. 75]
+
+REASONING:
+## Technical Analysis
+[Your detailed technical analysis here]
+
+## Strategy Signals Analysis
+[Your detailed strategy signals analysis here, if available]
+
+## Risk Factors
+[Your detailed risk factors analysis here]
+
+## Market Conditions
+[Your detailed market conditions analysis here]
+</output_format>
+
+<output_example>
+ACTION: BUY
+CONFIDENCE: 80
+
+REASONING:
+## Technical Analysis
+The price is currently above both the SMA20 and SMA50, indicating a bullish trend. The RSI is at 65, suggesting strong momentum without being overbought. The MACD line has crossed above the signal line, further confirming upward momentum. The price is near the upper Bollinger Band, indicating strength, and volume has been increasing over the last few periods, supporting the price movement.
+
+## Strategy Signals Analysis
+No specific strategy signals are available for this analysis.
+
+## Risk Factors
+The overall market volatility is moderate, with no significant news events expected in the near term. However, the proximity to the upper Bollinger Band suggests caution, as a pullback could occur. Ensure stop-loss orders are in place to manage potential downside risk.
+
+## Market Conditions
+The broader market is showing signs of recovery after a recent dip, with major indices trending upwards. Investor sentiment appears positive, and there is increased buying interest in the cryptocurrency sector. External factors such as regulatory news are stable, contributing to a favorable trading environment.
+</output_example>
 
 Remember:
+- ACTION must be exactly BUY, SELL, or NOTHING (all caps)
+- CONFIDENCE must be a number between 0-100
+- Put `ACTION:` and `CONFIDENCE:` each on its own line as shown above
 - Moon Dev always prioritizes risk management! 🛡️
 - Never trade USDC or SOL directly
 - Consider both technical and strategy signals
@@ -763,15 +792,13 @@ Strategy Signals Available:
                 action, confidence, reasoning = self._calculate_swarm_consensus(swarm_result)
 
                 # Add to recommendations DataFrame
-                self.recommendations_df = pd.concat([
-                    self.recommendations_df,
-                    pd.DataFrame([{
-                        'token': token,
-                        'action': action,
-                        'confidence': confidence,
-                        'reasoning': reasoning
-                    }])
-                ], ignore_index=True)
+                new_row = pd.DataFrame([{
+                    'token': str(token),
+                    'action': str(action),
+                    'confidence': int(confidence),
+                    'reasoning': str(reasoning)
+                }])
+                self.recommendations_df = pd.concat([self.recommendations_df, new_row], ignore_index=True)
 
                 cprint(f"✅ Swarm analysis complete for {token[:8]}!", "green")
                 return swarm_result
@@ -796,31 +823,42 @@ Strategy Signals Available:
                     cprint(f"❌ No response from AI for {token}", "red")
                     return None
 
-                # Parse the response
+                # Parse the response - in structured format
                 lines = response.split('\n')
-                action = lines[0].strip() if lines else "NOTHING"
+                action = "NOTHING"  # Default
+                confidence = 50     # Default
 
-                # Extract confidence from the response (assuming it's mentioned as a percentage)
-                confidence = 0
+                # Parse the structured response
                 for line in lines:
-                    if 'confidence' in line.lower():
-                        # Extract number from string like "Confidence: 75%"
+                    line = line.strip()
+                    if line.startswith('ACTION:'):
+                        action = line.split(':', 1)[1].strip().upper()
+                    elif line.startswith('CONFIDENCE:'):
                         try:
-                            confidence = int(''.join(filter(str.isdigit, line)))
+                            confidence_str = line.split(':', 1)[1].strip()
+                            confidence = int(''.join(filter(str.isdigit, confidence_str)))
                         except:
-                            confidence = 50  # Default if not found
+                            confidence = 50  # Default if parsing fails
 
-                # Add to recommendations DataFrame with proper reasoning
-                reasoning = '\n'.join(lines[1:]) if len(lines) > 1 else "No detailed reasoning provided"
-                self.recommendations_df = pd.concat([
-                    self.recommendations_df,
-                    pd.DataFrame([{
-                        'token': token,
-                        'action': action,
-                        'confidence': confidence,
-                        'reasoning': reasoning
-                    }])
-                ], ignore_index=True)
+                # Validate action
+                if action not in ['BUY', 'SELL', 'NOTHING']:
+                    action = "NOTHING"
+
+                # Extract reasoning -- everything after the structured fields
+                reasoning_start = -1
+                for i, line in enumerate(lines):
+                    if line.strip().startswith('REASONING:'):
+                        reasoning_start = i + 1
+                        break
+
+                reasoning = '\n'.join(lines[reasoning_start:]) if reasoning_start > 0 else "No detailed reasoning provided"
+                new_row = pd.DataFrame([{
+                    'token': str(token),
+                    'action': str(action),
+                    'confidence': int(confidence),
+                    'reasoning': str(reasoning)
+                }])
+                self.recommendations_df = pd.concat([self.recommendations_df, new_row], ignore_index=True)
 
                 print(f"🎯 Moon Dev's AI Analysis Complete for {token[:4]}!")
                 return response
@@ -828,15 +866,13 @@ Strategy Signals Available:
         except Exception as e:
             print(f"❌ Error in AI analysis: {str(e)}")
             # Still add to DataFrame even on error, but mark as NOTHING with 0 confidence
-            self.recommendations_df = pd.concat([
-                self.recommendations_df,
-                pd.DataFrame([{
-                    'token': token,
-                    'action': "NOTHING",
-                    'confidence': 0,
-                    'reasoning': f"Error during analysis: {str(e)}"
-                }])
-            ], ignore_index=True)
+            new_row = pd.DataFrame([{
+                'token': str(token),
+                'action': "NOTHING",
+                'confidence': 0,
+                'reasoning': f"Error during analysis: {str(e)}"
+            }])
+            self.recommendations_df = pd.concat([self.recommendations_df, new_row], ignore_index=True)
             return None
     
     def allocate_portfolio(self):
@@ -972,14 +1008,14 @@ Example format:
             account = n._get_account_from_env()
 
         for _, row in self.recommendations_df.iterrows():
-            token = row['token']
+            token = row.iloc[0]  # token column
             token_short = token[:8] + "..." if len(token) > 8 else token
 
             # Skip excluded tokens (USDC and SOL)
             if token in EXCLUDED_TOKENS:
                 continue
 
-            action = row['action']
+            action = row.iloc[1]  # action column
 
             # Check if we have a position
             if EXCHANGE == "HYPERLIQUID":
@@ -989,7 +1025,7 @@ Example format:
 
             cprint(f"\n{'='*60}", "cyan")
             cprint(f"🎯 Token: {token_short}", "cyan", attrs=['bold'])
-            cprint(f"🤖 Swarm Signal: {action} ({row['confidence']}% confidence)", "yellow", attrs=['bold'])
+            cprint(f"🤖 AI Agent Signal: {action} ({row['confidence']}% confidence)", "yellow", attrs=['bold'])
             cprint(f"💼 Current Position: ${current_position:.2f}", "white")
             cprint(f"{'='*60}", "cyan")
 
@@ -1010,12 +1046,21 @@ Example format:
                     cprint(f"✅ BUY signal - KEEPING POSITION", "white", "on_green")
                     cprint(f"💎 Maintaining ${current_position:.2f} position", "cyan")
             else:
-                # No position - explain what this means
+                # No position - SELL or BUY to open new position, or DO NOTHING
                 if action == "SELL":
                     if LONG_ONLY:
                         cprint(f"⏭️  SELL signal but NO POSITION to close", "white", "on_blue")
                         cprint(f"📊 LONG ONLY mode: Can't open short, doing nothing", "cyan")
                     else:
+                        # Check confidence threshold before opening short position
+                        confidence_value = row.iloc[2]  # confidence column
+                        # Convert to decimal if stored as percentage (0-100 range)
+                        confidence_pct = confidence_value / 100.0 if confidence_value > 1 else confidence_value
+                        
+                        if confidence_pct < TRADE_MIN_CONFIDENCE:
+                            cprint(f"⚠️ SELL signal confidence {confidence_pct:.1%} below threshold {TRADE_MIN_CONFIDENCE:.1%} - SKIPPING SHORT ENTRY", "yellow")
+                            continue
+
                         # SHORT MODE ENABLED - Open short position
                         # Get account balance and calculate position size
                         account_balance = get_account_balance()
@@ -1042,6 +1087,15 @@ Example format:
                     cprint(f"⏭️  Staying out of market", "cyan")
                 else:  # BUY
                     cprint(f"📈 BUY signal with no position", "white", "on_green")
+
+                    # Check confidence threshold before executing entry
+                    confidence_value = row.iloc[2]  # confidence column
+                    # Convert to decimal if stored as percentage (0-100 range)
+                    confidence_pct = confidence_value / 100.0 if confidence_value > 1 else confidence_value
+                    
+                    if confidence_pct < TRADE_MIN_CONFIDENCE:
+                        cprint(f"⚠️ BUY signal confidence {confidence_pct:.1%} below threshold {TRADE_MIN_CONFIDENCE:.1%} - SKIPPING ENTRY", "yellow")
+                        continue
 
                     if USE_PORTFOLIO_ALLOCATION:
                         cprint(f"📊 Portfolio allocation will handle entry", "white", "on_cyan")
@@ -1239,10 +1293,13 @@ Example format:
             self.handle_exits()
 
             # Portfolio allocation (only if enabled and there are BUY recommendations)
-            buy_recommendations = self.recommendations_df[self.recommendations_df['action'] == 'BUY']
+            buy_recommendations = self.recommendations_df[
+                (self.recommendations_df['action'] == 'BUY') & 
+                (self.recommendations_df['confidence'] >= TRADE_MIN_CONFIDENCE)
+            ]
 
             if USE_PORTFOLIO_ALLOCATION and len(buy_recommendations) > 0:
-                cprint(f"\n💰 Found {len(buy_recommendations)} BUY signal(s) - Using AI portfolio allocation...", "white", "on_green")
+                cprint(f"\n💰 Found {len(buy_recommendations)} BUY signal(s) above {TRADE_MIN_CONFIDENCE:.0%} confidence - Using AI portfolio allocation...", "white", "on_green")
                 allocation = self.allocate_portfolio()
 
                 if allocation:
@@ -1255,11 +1312,11 @@ Example format:
                 else:
                     cprint("\n⚠️ No allocations to execute!", "white", "on_yellow")
             elif not USE_PORTFOLIO_ALLOCATION and len(buy_recommendations) > 0:
-                cprint(f"\n💰 Found {len(buy_recommendations)} BUY signal(s)", "white", "on_green")
+                cprint(f"\n💰 Found {len(buy_recommendations)} BUY signal(s) above {TRADE_MIN_CONFIDENCE:.0%} confidence", "white", "on_green")
                 cprint("📊 Portfolio allocation is DISABLED - positions opened in handle_exits", "cyan")
             else:
-                cprint("\n⏭️  No BUY signals - No entries to make", "white", "on_blue")
-                cprint("📊 All signals were SELL or DO NOTHING", "cyan")
+                cprint("\n⏭️  No BUY signals above confidence threshold - No entries to make", "white", "on_blue")
+                cprint(f"📊 All signals were SELL, DO NOTHING, or below {TRADE_MIN_CONFIDENCE:.0%} confidence", "cyan")
             
             # Clean up temp data
             cprint("\n🧹 Cleaning up temporary data...", "white", "on_blue")
