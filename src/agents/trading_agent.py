@@ -193,20 +193,26 @@ SYMBOLS = [
 # END CONFIGURATION - CODE BELOW
 # ============================================================================
 
-# Keep only these prompts
-TRADING_PROMPT = """
-You are Moon Dev's AI Trading Assistant 🌙
+# Prompt for the inputs to the trading agent. Shared between single and swarm modes.
+TRADING_PROMPT_INPUTS = """
+You are an expert cryptocurrency trading AI analyzing market data.
 
-Analyze the provided market data and strategy signals (if available) to make a trading decision.
+Analyze the market data, and strategy signals if they exists, below and make a trading decision.
 
 Market Data Criteria:
-1. Price action relative to MA20 and MA40
+1. Price action relative to SMA20 and SMA50
 2. RSI levels and trend
-3. Volume patterns
-4. Recent price movements
+3. MACD indicators and trend
+4. Price relative to Bollinger Bands and their width
+5. Volume patterns
+6. Recent price movements
 
 {strategy_context}
 
+"""
+
+# Prompt for the outputs from the trading agent in single-model mode.
+TRADING_PROMPT_OUTPUTS = """
 Respond in this exact format:
 1. First line must be one of: BUY, SELL, or NOTHING (in caps)
 2. Then explain your reasoning, including:
@@ -216,10 +222,29 @@ Respond in this exact format:
    - Market conditions
    - Confidence level (as a percentage, e.g. 75%)
 
-Remember: 
+Remember:
 - Moon Dev always prioritizes risk management! 🛡️
 - Never trade USDC or SOL directly
 - Consider both technical and strategy signals
+"""
+
+# Prompt for the outputs from the trading agent in swarm mode.
+SWARM_TRADING_PROMPT_OUTPUTS = """
+CRITICAL RULES:
+1. Your response MUST be EXACTLY one of these three words: Buy, Sell, or Do Nothing
+2. Do NOT provide any explanation, reasoning, or additional text
+3. Respond with ONLY the action word
+4. Do NOT show your thinking process or internal reasoning
+
+Analyze the market data below and decide:
+
+- "Buy" = Strong bullish signals, recommend opening/holding position
+- "Sell" = Bearish signals or major weakness, recommend closing position entirely
+- "Do Nothing" = Unclear/neutral signals, recommend holding current state unchanged
+
+IMPORTANT: "Do Nothing" means maintain current position (if we have one, keep it; if we don't, stay out)
+
+RESPOND WITH ONLY ONE WORD: Buy, Sell, or Do Nothing
 """
 
 ALLOCATION_PROMPT = """
@@ -247,24 +272,6 @@ Remember:
 - Only allocate to BUY recommendations
 - Cash must be stored as USDC using USDC_ADDRESS: {USDC_ADDRESS}
 """
-
-SWARM_TRADING_PROMPT = """You are an expert cryptocurrency trading AI analyzing market data.
-
-CRITICAL RULES:
-1. Your response MUST be EXACTLY one of these three words: Buy, Sell, or Do Nothing
-2. Do NOT provide any explanation, reasoning, or additional text
-3. Respond with ONLY the action word
-4. Do NOT show your thinking process or internal reasoning
-
-Analyze the market data below and decide:
-
-- "Buy" = Strong bullish signals, recommend opening/holding position
-- "Sell" = Bearish signals or major weakness, recommend closing position entirely
-- "Do Nothing" = Unclear/neutral signals, recommend holding current state unchanged
-
-IMPORTANT: "Do Nothing" means maintain current position (if we have one, keep it; if we don't, stay out)
-
-RESPOND WITH ONLY ONE WORD: Buy, Sell, or Do Nothing"""
 
 import os
 import sys
@@ -552,8 +559,8 @@ class TradingAgent:
             cprint(f"❌ AI model error: {e}", "red")
             return None
 
-    def _format_market_data_for_swarm(self, token, market_data):
-        """Format market data into a clean, readable format for swarm analysis"""
+    def _format_market_data_for_ai(self, token, market_data):
+        """Format market data into a clean, readable format for AI agent analysis"""
         try:
             # Print market data visibility for confirmation
             cprint(f"\n📊 MARKET DATA RECEIVED FOR {token[:8]}...", "cyan", attrs=['bold'])
@@ -565,24 +572,32 @@ class TradingAgent:
                 cprint(f"🕐 Timeframe: {DATA_TIMEFRAME}", "yellow")
 
                 # Show the first 5 bars
-                cprint("\n📈 First 5 Bars (OHLCV):", "cyan")
+                cprint("\n📈 First 5 Bars (OHLCV -- Oldest):", "cyan")
                 print(market_data.head().to_string())
 
                 # Show the last 3 bars
-                cprint("\n📉 Last 3 Bars (Most Recent):", "cyan")
+                cprint("\n📉 Last 3 Bars (OHLCV -- Most Recent):", "cyan")
                 print(market_data.tail(3).to_string())
 
-                # Format for swarm
+                # Format for AI agent
                 formatted = f"""
 TOKEN: {token}
 TIMEFRAME: {DATA_TIMEFRAME} bars
 TOTAL BARS: {len(market_data)}
 DATE RANGE: {market_data.index[0]} to {market_data.index[-1]}
 
-RECENT PRICE ACTION (Last 10 bars):
+AVAILABLE TECHNICAL INDICATORS:
+- Volume: Yes
+- RSI (14-period): Yes
+- SMA_20 (20-period moving average): Yes
+- SMA_50 (50-period moving average): Yes
+- MACD with signal/histogram: Yes
+- Bollinger Bands (20-period, 2 std dev): Yes
+
+RECENT PRICE ACTION (Last 10 bars with all indicators):
 {market_data.tail(10).to_string()}
 
-FULL DATASET:
+FULL DATASET (includes all OHLCV + technical indicators):
 {market_data.to_string()}
 """
             else:
@@ -594,7 +609,7 @@ FULL DATASET:
             if isinstance(market_data, dict) and 'strategy_signals' in market_data:
                 formatted += f"\n\nSTRATEGY SIGNALS:\n{json.dumps(market_data['strategy_signals'], indent=2)}"
 
-            cprint("\n✅ Market data formatted and ready for swarm!\n", "green")
+            cprint("\n✅ Market data formatted and ready for AI agent!\n", "green")
             return formatted
 
         except Exception as e:
@@ -672,18 +687,31 @@ FULL DATASET:
             if token in EXCLUDED_TOKENS:
                 print(f"⚠️ Skipping analysis for excluded token: {token}")
                 return None
+            
+            # Prepare strategy context
+            strategy_context = ""
+            if 'strategy_signals' in market_data:
+                strategy_context = f"""
+Strategy Signals Available:
+{json.dumps(market_data['strategy_signals'], indent=2)}
+                """
+            else:
+                strategy_context = "No strategy signals available."
+            
+            # Format market data for AI
+            formatted_data = self._format_market_data_for_ai(token, market_data)
 
             # ============= SWARM MODE =============
             if USE_SWARM_MODE:
                 cprint(f"\n🌊 Analyzing {token[:8]}... with SWARM (6 AI models voting)", "cyan", attrs=['bold'])
 
-                # Format market data for swarm
-                formatted_data = self._format_market_data_for_swarm(token, market_data)
+                # Combine prompt inputs and outputs for swarm
+                swarm_trading_prompt = TRADING_PROMPT_INPUTS.format(strategy_context=strategy_context) + SWARM_TRADING_PROMPT_OUTPUTS
 
                 # Query the swarm (takes ~45-60 seconds)
                 swarm_result = self.swarm.query(
                     prompt=formatted_data,
-                    system_prompt=SWARM_TRADING_PROMPT
+                    system_prompt=swarm_trading_prompt
                 )
 
                 if not swarm_result:
@@ -709,20 +737,15 @@ FULL DATASET:
 
             # ============= SINGLE MODEL MODE (Original) =============
             else:
-                # Prepare strategy context
-                strategy_context = ""
-                if 'strategy_signals' in market_data:
-                    strategy_context = f"""
-Strategy Signals Available:
-{json.dumps(market_data['strategy_signals'], indent=2)}
-                    """
-                else:
-                    strategy_context = "No strategy signals available."
+                cprint(f"\n🤖 Analyzing {token[:8]}... with single AI model", "cyan", attrs=['bold'])
+
+                # Combine prompt inputs and outputs for single AI model
+                trading_prompt = TRADING_PROMPT_INPUTS.format(strategy_context=strategy_context) + TRADING_PROMPT_OUTPUTS
 
                 # Call AI model via model factory
                 response = self.chat_with_ai(
-                    TRADING_PROMPT.format(strategy_context=strategy_context),
-                    f"Market Data to Analyze:\n{market_data}"
+                    trading_prompt,
+                    formatted_data
                 )
 
                 if not response:
@@ -787,7 +810,8 @@ Strategy Signals Available:
             else:
                 available_tokens = MONITORED_TOKENS
 
-            allocation_prompt = f"""You are Moon Dev's Portfolio Allocation AI 🌙
+            allocation_prompt = f"""
+You are Moon Dev's Portfolio Allocation AI 🌙
 
 Given:
 - Total portfolio size: ${account_balance}
@@ -806,7 +830,8 @@ Example format:
 {{
     "token_address": amount_in_usd,
     "{USDC_ADDRESS}": remaining_cash_amount  # Use exact USDC address
-}}"""
+}}
+            """
 
             response = self.chat_with_ai("", allocation_prompt)
 
