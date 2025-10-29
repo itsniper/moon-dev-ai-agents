@@ -55,6 +55,79 @@ BASE_URL = 'https://api.hyperliquid.xyz/info'
 # Global variable to store timestamp offset
 timestamp_offset = None
 
+def save_user_rate_limits(account_address=None):
+    """Query user rate limits from Hyperliquid API and save to file"""
+    try:
+        # Get account address from env if not provided
+        if account_address is None:
+            private_key = os.getenv('HYPER_LIQUID_ETH_PRIVATE_KEY')
+            if not private_key:
+                print("❌ HYPER_LIQUID_ETH_PRIVATE_KEY not found in .env file")
+                return None
+            account = eth_account.Account.from_key(private_key)
+            account_address = account.address
+
+        print(f"\n🔄 Querying rate limits for user: {account_address[:10]}...")
+
+        response = requests.post(
+            BASE_URL,
+            headers={'Content-Type': 'application/json'},
+            json={"type": "userRateLimit", "user": account_address}
+        )
+
+        if response.status_code == 200:
+            rate_limit_data = response.json()
+
+            # Save to file (only most recent data)
+            temp_data_dir = '/Users/jus10sb/Documents/Finances/Trading/Crypto/Source/moon-dev-ai-agents/temp_data'
+            os.makedirs(temp_data_dir, exist_ok=True)
+
+            file_path = os.path.join(temp_data_dir, 'hyperliquid_rate_limits.json')
+            with open(file_path, 'w') as f:
+                json.dump({
+                    'timestamp': datetime.datetime.now().isoformat(),
+                    'user_address': account_address,
+                    'rate_limits': rate_limit_data
+                }, f, indent=2)
+
+            print(f"💾 Saved rate limit data: cumVlm={rate_limit_data.get('cumVlm', 'N/A')}, requests={rate_limit_data.get('nRequestsUsed', 'N/A')}/{rate_limit_data.get('nRequestsCap', 'N/A')}")
+            return rate_limit_data
+        else:
+            print(f"❌ Failed to query rate limits: HTTP {response.status_code}")
+            return None
+
+    except Exception as e:
+        print(f"❌ Error querying user rate limits: {e}")
+        return None
+
+def get_user_rate_limits(account_address=None):
+    """Get current rate limits without saving to file"""
+    try:
+        # Get account address from env if not provided
+        if account_address is None:
+            private_key = os.getenv('HYPER_LIQUID_ETH_PRIVATE_KEY')
+            if not private_key:
+                print("❌ HYPER_LIQUID_ETH_PRIVATE_KEY not found in .env file")
+                return None
+            account = eth_account.Account.from_key(private_key)
+            account_address = account.address
+
+        response = requests.post(
+            BASE_URL,
+            headers={'Content-Type': 'application/json'},
+            json={"type": "userRateLimit", "user": account_address}
+        )
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"❌ Failed to get rate limits: HTTP {response.status_code}")
+            return None
+
+    except Exception as e:
+        print(f"❌ Error getting rate limits: {e}")
+        return None
+
 def adjust_timestamp(dt):
     """Adjust API timestamps by subtracting the timestamp offset."""
     if timestamp_offset is not None:

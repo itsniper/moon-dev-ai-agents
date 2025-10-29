@@ -1279,6 +1279,19 @@ def main():
     """Main function to run the trading agent every 15 minutes"""
     cprint("🌙 Moon Dev AI Trading System Starting Up! 🚀", "white", "on_blue")
 
+    # Check and display current rate limits
+    if EXCHANGE == "HYPERLIQUID":
+        cprint("\n📊 Checking HyperLiquid rate limits...", "cyan")
+        rate_limits = n.get_user_rate_limits()
+        if rate_limits:
+            cum_vlm = rate_limits.get('cumVlm', 'N/A')
+            requests_used = rate_limits.get('nRequestsUsed', 'N/A')
+            requests_cap = rate_limits.get('nRequestsCap', 'N/A')
+            cprint(f"💰 Cumulative Volume: ${cum_vlm}", "white")
+            cprint(f"📈 API Requests: {requests_used}/{requests_cap}", "white")
+        else:
+            cprint("❌ Could not retrieve rate limits", "red")
+
     agent = TradingAgent()
     INTERVAL = SLEEP_BETWEEN_RUNS_MINUTES * 60  # Convert minutes to seconds
 
